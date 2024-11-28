@@ -1,3 +1,4 @@
+import { HomeLayout } from '../components/Layout';
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,143 +20,6 @@ import {
     MessagesSquare as Discord,
     Menu
   } from 'lucide-react';
-  
-const NavButton = ({ icon: Icon, label, isActive, onClick }) => {
-  return (
-    <button 
-      onClick={onClick}
-      className={`
-        px-6 py-3 border transition-all duration-300 ease-in-out
-        rounded-full flex items-center space-x-3 group
-        hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] 
-        ${isActive 
-          ? 'border-blue-500 text-blue-500 bg-blue-50 shadow-[0_0_25px_rgba(59,130,246,0.3)]' 
-          : 'border-black/20 text-black bg-white/90 hover:border-blue-400'}
-      `}
-    >
-      <Icon className={`w-6 h-6 transition-transform duration-300 group-hover:scale-125 ${isActive ? 'text-blue-500' : 'text-black/70'}`} />
-      <span className="text-lg font-semibold tracking-wide">{label}</span>
-    </button>
-  );
-};
-
-const Navbar = () => {
-  const [activeTab, setActiveTab] = useState('home');
-  const [menuOpen, setMenuOpen] = useState(false);
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  const handleNavigation = (path) => {
-    setActiveTab(path);
-    if(path === 'ai-recommend'){
-      window.location.href = '/welcome';
-    }
-  };
-
-  const signInButton = user ? (
-    <div 
-      onClick={() => navigate('/profile')} 
-      className="flex items-center space-x-3 px-6 py-3 text-gray-700 cursor-pointer hover:bg-gray-100 rounded-full"
-    >
-      {user.photoURL ? (
-        <img 
-          src={user.photoURL} 
-          alt="Profile" 
-          className="w-8 h-8 rounded-full"
-        />
-      ) : (
-        <UserCircle2 className="w-6 h-6" />
-      )}
-      <span>{user.email}</span>
-    </div>
-  ) : (
-    <Link
-      to="/login"
-      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-full flex items-center space-x-3
-                hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 transition-all duration-300 ease-in-out transform hover:scale-110"
-    >
-      <UserCircle2 className="w-6 h-6" />
-      <span>Sign In</span>
-    </Link>
-  );
-
-  return (
-    <nav className="w-full py-4 px-8 flex items-center justify-between backdrop-blur-lg bg-white/40 fixed top-0 z-50 border-b border-gray-300">
-      <div className="flex items-center space-x-4">
-        <h1 className="font-serif text-4xl flex items-center space-x-3 cursor-pointer group"
-            onClick={() => handleNavigation('home')}>
-          <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-bold">
-            ModeLabs
-          </span>
-          <div className="w-3 h-3 rounded-full bg-blue-500 group-hover:animate-ping"/>
-        </h1>
-      </div>
-      
-      <div className="hidden lg:flex items-center space-x-6">
-        <NavButton 
-          icon={Brain} 
-          label="Model" 
-          isActive={activeTab === 'model'}
-          onClick={() => handleNavigation('model')}
-        />
-        <NavButton 
-          icon={Sparkles} 
-          label="AI Recommend" 
-          isActive={activeTab === 'ai-recommend'}
-          onClick={() => handleNavigation('ai-recommend')}
-        />
-        <NavButton 
-          icon={Database} 
-          label="Dataset" 
-          isActive={activeTab === 'dataset'}
-          onClick={() => handleNavigation('dataset')}
-        />
-        <NavButton 
-          icon={TestTube} 
-          label="Test" 
-          isActive={activeTab === 'test'}
-          onClick={() => handleNavigation('test')}
-        />
-        {signInButton}
-      </div>
-      <div className="lg:hidden flex items-center">
-        <button onClick={() => setMenuOpen(!menuOpen)}>
-          <Menu className="w-7 h-7 text-gray-800" />
-        </button>
-      </div>
-      {menuOpen && (
-        <div className="absolute top-full left-0 w-full bg-white shadow-lg py-6 flex flex-col items-center space-y-4 lg:hidden">
-          <NavButton 
-            icon={Brain} 
-            label="Model" 
-            isActive={activeTab === 'model'}
-            onClick={() => handleNavigation('model')}
-          />
-          <NavButton 
-            icon={Sparkles} 
-            label="AI Recommend" 
-            isActive={activeTab === 'ai-recommend'}
-            onClick={() => handleNavigation('ai-recommend')}
-          />
-          <NavButton 
-            icon={Database} 
-            label="Dataset" 
-            isActive={activeTab === 'dataset'}
-            onClick={() => handleNavigation('dataset')}
-          />
-          <NavButton 
-            icon={TestTube} 
-            label="Test" 
-            isActive={activeTab === 'test'}
-            onClick={() => handleNavigation('test')}
-          />
-          {signInButton}
-        </div>
-      )}
-    </nav>
-  );
-};
-
 const GradientBackground = () => {
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -230,131 +94,132 @@ const MainContent = () => {
 };
 
 const Footer = () => {
-    return (
-      <footer className="relative z-10 bg-white/20 backdrop-blur-md border-t border-white/30">
-        <div className="max-w-7xl mx-auto pt-20 pb-12 px-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-16">
-            {/* Research Section */}
-            <div className="space-y-5">
-              <h3 className="text-xl font-bold text-gray-900">Research</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Overview</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Index</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Latest Papers</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Documentation</a></li>
-              </ul>
-            </div>
-  
-            {/* Products Section */}
-            <div className="space-y-5">
-              <h3 className="text-xl font-bold text-gray-900">Products</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Models</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Datasets</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">API</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Pricing</a></li>
-              </ul>
-            </div>
-  
-            {/* Company Section */}
-            <div className="space-y-5">
-              <h3 className="text-xl font-bold text-gray-900">Company</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">About Us</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Careers</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Blog</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">News</a></li>
-              </ul>
-            </div>
-  
-            {/* Legal Section */}
-            <div className="space-y-5">
-              <h3 className="text-xl font-bold text-gray-900">Legal</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Terms</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Privacy</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Security</a></li>
-                <li><a href="#" className="text-gray-700 hover:text-blue-700">Cookie Policy</a></li>
-              </ul>
-            </div>
-  
-            {/* Contact Section */}
-            <div className="space-y-5">
-              <h3 className="text-xl font-bold text-gray-900">Connect</h3>
-              <ul className="space-y-3">
-                <li>
-                  <a 
-                    href="mailto:caojq22@mails.tsinghua.edu.cn" 
-                    className="text-gray-700 hover:text-blue-700 flex items-center space-x-3"
-                  >
-                    <Mail className="w-5 h-5" />
-                    <span>Contact Us</span>
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-gray-700 hover:text-blue-700 flex items-center space-x-3">
-                    <Globe className="w-5 h-5" />
-                    <span>Support Center</span>
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-gray-700 hover:text-blue-700 flex items-center space-x-3">
-                    <Heart className="w-5 h-5" />
-                    <span>Community</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
+  return (
+    <footer className="relative z-10 bg-white/20 backdrop-blur-md border-t border-white/30">
+      <div className="max-w-7xl mx-auto pt-20 pb-12 px-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-16">
+          {/* Research Section */}
+          <div className="space-y-5">
+            <h3 className="text-xl font-bold text-gray-900">Research</h3>
+            <ul className="space-y-3">
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Overview</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Index</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Latest Papers</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Documentation</a></li>
+            </ul>
           </div>
   
-          {/* Bottom Bar */}
-          <div className="pt-12 border-t border-gray-300">
-            <div className="flex flex-col md:flex-row justify-between items-center space-y-5 md:space-y-0">
-              <div className="flex items-center space-x-5">
-                <span className="text-gray-600">© 2024 ModeLabs. All rights reserved.</span>
-                <a href="#" className="text-gray-600 hover:text-blue-700">
+          {/* Products Section */}
+          <div className="space-y-5">
+            <h3 className="text-xl font-bold text-gray-900">Products</h3>
+            <ul className="space-y-3">
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Models</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Datasets</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">API</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Pricing</a></li>
+            </ul>
+          </div>
+  
+          {/* Company Section */}
+          <div className="space-y-5">
+            <h3 className="text-xl font-bold text-gray-900">Company</h3>
+            <ul className="space-y-3">
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">About Us</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Careers</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Blog</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">News</a></li>
+            </ul>
+          </div>
+  
+          {/* Legal Section */}
+          <div className="space-y-5">
+            <h3 className="text-xl font-bold text-gray-900">Legal</h3>
+            <ul className="space-y-3">
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Terms</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Privacy</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Security</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-blue-700">Cookie Policy</a></li>
+            </ul>
+          </div>
+  
+          {/* Contact Section */}
+          <div className="space-y-5">
+            <h3 className="text-xl font-bold text-gray-900">Connect</h3>
+            <ul className="space-y-3">
+              <li>
+                <a 
+                  href="mailto:caojq22@mails.tsinghua.edu.cn" 
+                  className="text-gray-700 hover:text-blue-700 flex items-center space-x-3"
+                >
+                  <Mail className="w-5 h-5" />
+                  <span>Contact Us</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-gray-700 hover:text-blue-700 flex items-center space-x-3">
                   <Globe className="w-5 h-5" />
+                  <span>Support Center</span>
                 </a>
-              </div>
-              
-              <div className="flex items-center space-x-8">
-                <a href="#" className="text-gray-500 hover:text-gray-700">
-                  <Twitter className="w-6 h-6" />
+              </li>
+              <li>
+                <a href="#" className="text-gray-700 hover:text-blue-700 flex items-center space-x-3">
+                  <Heart className="w-5 h-5" />
+                  <span>Community</span>
                 </a>
-                <a href="#" className="text-gray-500 hover:text-gray-700">
-                  <Github className="w-6 h-6" />
-                </a>
-                <a href="#" className="text-gray-500 hover:text-gray-700">
-                  <Linkedin className="w-6 h-6" />
-                </a>
-                <a href="#" className="text-gray-500 hover:text-gray-700">
-                  <Youtube className="w-6 h-6" />
-                </a>
-                <a href="#" className="text-gray-500 hover:text-gray-700">
-                  <Instagram className="w-6 h-6" />
-                </a>
-                <a href="#" className="text-gray-500 hover:text-gray-700">
-                  <Discord className="w-6 h-6" />
-                </a>
-              </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+  
+        {/* Bottom Bar */}
+        <div className="pt-12 border-t border-gray-300">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-5 md:space-y-0">
+            <div className="flex items-center space-x-5">
+              <span className="text-gray-600">© 2024 ModeLabs. All rights reserved.</span>
+              <a href="#" className="text-gray-600 hover:text-blue-700">
+                <Globe className="w-5 h-5" />
+              </a>
+            </div>
+            
+            <div className="flex items-center space-x-8">
+              <a href="#" className="text-gray-500 hover:text-gray-700">
+                <Twitter className="w-6 h-6" />
+              </a>
+              <a href="#" className="text-gray-500 hover:text-gray-700">
+                <Github className="w-6 h-6" />
+              </a>
+              <a href="#" className="text-gray-500 hover:text-gray-700">
+                <Linkedin className="w-6 h-6" />
+              </a>
+              <a href="#" className="text-gray-500 hover:text-gray-700">
+                <Youtube className="w-6 h-6" />
+              </a>
+              <a href="#" className="text-gray-500 hover:text-gray-700">
+                <Instagram className="w-6 h-6" />
+              </a>
+              <a href="#" className="text-gray-500 hover:text-gray-700">
+                <Discord className="w-6 h-6" />
+              </a>
             </div>
           </div>
         </div>
-      </footer>
-    );
-  };
-  
-  const LandingPage = () => {
-    return (
+      </div>
+    </footer>
+  );
+};
+
+const Home = () => {
+  return (
+    <HomeLayout>
       <div className="relative min-h-screen bg-white overflow-hidden flex flex-col">
         <GradientBackground />
-        <Navbar />
         <main className="flex-grow">
           <MainContent />
         </main>
         <Footer />
       </div>
-    );
-  };
-  
-export default LandingPage;
+    </HomeLayout>
+  );
+};
+
+export default Home;

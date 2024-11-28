@@ -60,6 +60,39 @@ const Profile = () => {
     }
   };
 
+  const ProfileNavigation = () => {
+    const navigate = useNavigate();
+    
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <button
+          onClick={() => navigate('/model')}
+          className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+        >
+          <h3 className="font-medium">Models</h3>
+        </button>
+        <button
+          onClick={() => navigate('/dataset')}
+          className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+        >
+          <h3 className="font-medium">Datasets</h3>
+        </button>
+        <button
+          onClick={() => navigate('/test')}
+          className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+        >
+          <h3 className="font-medium">Test</h3>
+        </button>
+        <button
+          onClick={() => navigate('/ai-recommend')}
+          className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+        >
+          <h3 className="font-medium">AI Recommend</h3>
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">

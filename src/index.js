@@ -12,15 +12,18 @@ import App from './App';
 import WelcomePage from './WelcomePage';
 import reportWebVitals from './reportWebVitals';
 import Requirement_Dialog from './Requirement_Dialog'
-import Recommendation from './Recommendation'
+import Recommendation from './pages/Recommendation'
 import Home from './pages/Home'
-import Ranking from './Ranking'
+import Ranking from './pages/Ranking'
 import Navbar from './components/Navbar'
 import { Table } from 'lucide-react';
 import ModelTest from './components/ModelTest';
 import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
+import Dataset from './pages/Dataset';
+import Test from './pages/Test';
+
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -40,6 +43,11 @@ root.render(
           <Route path="/api" element={<ModelTest />} />
           <Route path="/login" element={<Login />} /> 
           <Route path="/profile" element={<Profile />} />
+          <Route path="/dataset" element={<Dataset />} />
+          <Route path="/test" element={<Test />} />
+          <Route path="/ai-recommend" element={<Recommendation />} />
+          
+      
           {/* 未来的路由 */}
           {/* <Route path="/profile" element={<Profile />} /> */}
           {/* <Route path="/settings" element={<Settings />} /> */}
