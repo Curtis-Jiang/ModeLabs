@@ -1,55 +1,99 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { Search, Database, Download, ExternalLink, Upload, X, CheckCircle, AlertCircle } from 'lucide-react';
-import { storage } from '../config/firebase'; // Make sure to configure Firebase storage
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db } from '../config/firebase';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
+import { 
+  Upload, 
+  Database, 
+  X, 
+  CheckCircle, 
+  AlertCircle, 
+  Search,
+  Download,
+  ExternalLink
+} from 'lucide-react';
+
+const ALLOWED_EXTENSIONS = ['.json', '.jsonl', '.csv', '.xlsx', '.yaml', '.yml'];
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 const Dataset = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [datasets, setDatasets] = useState([]);
+  const [loading, setLoading] = useState(true);
   const fileInputRef = useRef(null);
   const { user } = useAuth();
 
-  const datasets = [
-    {
-      id: 1,
-      name: "MMLU",
-      description: "Massive Multitask Language Understanding",
-      category: "Language Understanding",
-      size: "15.5GB",
-      format: "JSON",
-      lastUpdated: "2024-03-15",
-      downloads: 12500,
-      license: "MIT"
-    },
-    {
-      id: 2,
-      name: "GSM8K",
-      description: "Grade School Math 8K",
-      category: "Mathematics",
-      size: "2.3GB",
-      format: "JSON",
-      lastUpdated: "2024-03-10",
-      downloads: 8900,
-      license: "Apache 2.0"
-    },
-    // Add more datasets as needed
-  ];
+  // Fetch datasets from Firebase
+  useEffect(() => {
+    const fetchDatasets = async () => {
+      try {
+        const datasetsQuery = query(
+          collection(db, 'datasets'),
+          orderBy('uploadedAt', 'desc')
+        );
+        const querySnapshot = await getDocs(datasetsQuery);
+        const datasetsData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          // Convert Firebase Timestamp to string for display
+          lastUpdated: doc.data().uploadedAt?.toDate().toLocaleDateString() || 'N/A'
+        }));
+        setDatasets(datasetsData);
+      } catch (error) {
+        console.error('Error fetching datasets:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDatasets();
+  }, []);
+
+  // Filter datasets based on search and category
+  const filteredDatasets = datasets.filter(dataset => {
+    const matchesSearch = dataset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         dataset.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || dataset.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  // Format file size for display
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (file) {
-      if (file.size > 100 * 1024 * 1024) { // 100MB limit
+      const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+      
+      // Validate file extension
+      if (!ALLOWED_EXTENSIONS.includes(fileExtension)) {
+        setUploadStatus({
+          type: 'error',
+          message: `File type not allowed. Allowed types: ${ALLOWED_EXTENSIONS.join(', ')}`
+        });
+        return;
+      }
+
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
         setUploadStatus({
           type: 'error',
           message: 'File size must be less than 100MB'
         });
         return;
       }
+
       setSelectedFile(file);
       setUploadStatus(null);
     }
@@ -62,28 +106,24 @@ const Dataset = () => {
     setUploadStatus(null);
 
     try {
-      // Create a reference to the file in Firebase Storage
-      const storageRef = ref(storage, `datasets/${user.uid}/${selectedFile.name}`);
-      
-      // Upload the file
-      await uploadBytes(storageRef, selectedFile);
-      
-      // Get the download URL
-      const downloadURL = await getDownloadURL(storageRef);
-
-      // Here you would typically also save the dataset metadata to your database
-      // await saveDatasetMetadata({
-      //   name: selectedFile.name,
-      //   userId: user.uid,
-      //   downloadURL,
-      //   size: selectedFile.size,
-      //   uploadDate: new Date().toISOString(),
-      //   // ... other metadata
-      // });
+      // Store metadata in Firestore
+      const datasetRef = await addDoc(collection(db, 'datasets'), {
+        name: selectedFile.name,
+        userId: user.uid,
+        userEmail: user.email,
+        fileSize: selectedFile.size,
+        fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
+        uploadedAt: serverTimestamp(),
+        description: '', // You could add a description field
+        status: 'pending', // Since we don't have actual file storage yet
+        downloads: 0,
+        visibility: 'public',
+        tags: []
+      });
 
       setUploadStatus({
         type: 'success',
-        message: 'Dataset uploaded successfully!'
+        message: 'Dataset metadata saved successfully! (Note: actual file storage coming soon)'
       });
       setSelectedFile(null);
       if (fileInputRef.current) {
@@ -93,7 +133,7 @@ const Dataset = () => {
       console.error('Upload error:', error);
       setUploadStatus({
         type: 'error',
-        message: 'Error uploading dataset. Please try again.'
+        message: 'Error saving dataset metadata. Please try again.'
       });
     } finally {
       setIsUploading(false);
@@ -127,7 +167,7 @@ const Dataset = () => {
                 ref={fileInputRef}
                 onChange={handleFileSelect}
                 className="hidden"
-                accept=".json,.csv,.txt,.jsonl"
+                accept=".json,.jsonl,.csv,.xlsx,.yaml,.yml"
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -223,46 +263,71 @@ const Dataset = () => {
           </select>
         </div>
 
-        {/* Datasets Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {datasets.map((dataset) => (
-            <div
-              key={dataset.id}
-              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    {dataset.name}
-                  </h3>
-                  <p className="text-sm text-gray-600">{dataset.category}</p>
+        {/* Loading State */}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading datasets...</p>
+          </div>
+        ) : (
+          /* Datasets Grid */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredDatasets.map((dataset) => (
+              <div
+                key={dataset.id}
+                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      {dataset.name}
+                    </h3>
+                    <p className="text-sm text-gray-600">{dataset.fileType}</p>
+                  </div>
+                  <Database className="text-blue-500" />
                 </div>
-                <Database className="text-blue-500" />
-              </div>
-              
-              <p className="text-gray-600 mb-4">{dataset.description}</p>
-              
-              <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-4">
-                <div>Size: {dataset.size}</div>
-                <div>Format: {dataset.format}</div>
-                <div>Updated: {dataset.lastUpdated}</div>
-                <div>Downloads: {dataset.downloads}</div>
-              </div>
+                
+                <p className="text-gray-600 mb-4">
+                  {dataset.description || 'No description provided'}
+                </p>
+                
+                <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-4">
+                  <div>Size: {formatFileSize(dataset.fileSize)}</div>
+                  <div>Type: {dataset.fileType}</div>
+                  <div>Updated: {dataset.lastUpdated}</div>
+                  <div>Downloads: {dataset.downloads}</div>
+                </div>
 
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">{dataset.license}</span>
-                <div className="space-x-2">
-                  <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-full">
-                    <Download className="w-5 h-5" />
-                  </button>
-                  <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-full">
-                    <ExternalLink className="w-5 h-5" />
-                  </button>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">
+                    Uploaded by: {dataset.userEmail}
+                  </span>
+                  <div className="space-x-2">
+                    <button 
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
+                      title="Download dataset"
+                    >
+                      <Download className="w-5 h-5" />
+                    </button>
+                    <button 
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
+                      title="View details"
+                    >
+                      <ExternalLink className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
+
+        {/* No Results Message */}
+        {!loading && filteredDatasets.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-600">No datasets found matching your criteria.</p>
+          </div>
+        )}
       </div>
     </Layout>
   );
