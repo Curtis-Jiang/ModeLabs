@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { db } from '../config/firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
+import { db, storage } from '../config/firebase';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
   Upload, 
   Database, 
@@ -11,7 +12,8 @@ import {
   AlertCircle, 
   Search,
   Download,
-  ExternalLink
+  ExternalLink,
+  Trash2
 } from 'lucide-react';
 
 const ALLOWED_EXTENSIONS = ['.json', '.jsonl', '.csv', '.xlsx', '.yaml', '.yml'];
@@ -19,12 +21,14 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 const Dataset = () => {
   const [selectedFile, setSelectedFile] = useState(null);
+  const [fileDescription, setFileDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [datasets, setDatasets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showDescriptionInput, setShowDescriptionInput] = useState(false);
   const fileInputRef = useRef(null);
   const { user } = useAuth();
 
@@ -95,6 +99,7 @@ const Dataset = () => {
       }
 
       setSelectedFile(file);
+      setShowDescriptionInput(true); // Show the description input
       setUploadStatus(null);
     }
   };
@@ -114,18 +119,38 @@ const Dataset = () => {
         fileSize: selectedFile.size,
         fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
         uploadedAt: serverTimestamp(),
-        description: '', // You could add a description field
+        description: fileDescription, // Save the description
         status: 'pending', // Since we don't have actual file storage yet
         downloads: 0,
         visibility: 'public',
         tags: []
       });
 
+      // Fetch the newly added dataset
+      const newDataset = {
+        id: datasetRef.id,
+        name: selectedFile.name,
+        userId: user.uid,
+        userEmail: user.email,
+        fileSize: selectedFile.size,
+        fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
+        uploadedAt: new Date().toLocaleDateString(), // Set the current date
+        description: fileDescription,
+        status: 'pending',
+        downloads: 0,
+        visibility: 'public',
+        tags: []
+      };
+
+      setDatasets([newDataset, ...datasets]); // Add the new dataset to the state
+
       setUploadStatus({
         type: 'success',
         message: 'Dataset metadata saved successfully! (Note: actual file storage coming soon)'
       });
       setSelectedFile(null);
+      setFileDescription(''); // Clear the description input
+      setShowDescriptionInput(false); // Hide the description input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -138,6 +163,25 @@ const Dataset = () => {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleDelete = async (datasetId) => {
+    try {
+      await deleteDoc(doc(db, 'datasets', datasetId));
+      setDatasets(datasets.filter(dataset => dataset.id !== datasetId));
+    } catch (error) {
+      console.error('Error deleting dataset:', error);
+    }
+  };
+
+  const handleDownload = (dataset) => {
+    // Simulate file download
+    const element = document.createElement('a');
+    const file = new Blob([JSON.stringify(dataset)], { type: 'application/json' });
+    element.href = URL.createObjectURL(file);
+    element.download = `${dataset.name}.json`;
+    document.body.appendChild(element);
+    element.click();
   };
 
   return (
@@ -199,6 +243,23 @@ const Dataset = () => {
             </div>
           </div>
 
+          {/* Description Input */}
+          {showDescriptionInput && (
+            <div className="mt-4">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <input
+                type="text"
+                id="description"
+                value={fileDescription}
+                onChange={(e) => setFileDescription(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Enter a description for the dataset"
+              />
+            </div>
+          )}
+
           {/* Selected File Info */}
           {selectedFile && (
             <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
@@ -212,6 +273,7 @@ const Dataset = () => {
               <button
                 onClick={() => {
                   setSelectedFile(null);
+                  setShowDescriptionInput(false); // Hide the description input
                   if (fileInputRef.current) {
                     fileInputRef.current.value = '';
                   }
@@ -293,7 +355,7 @@ const Dataset = () => {
                 
                 <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-4">
                   <div>Size: {formatFileSize(dataset.fileSize)}</div>
-                  <div>Type: {dataset.fileType}</div>
+                  <div>Format: {dataset.fileType}</div>
                   <div>Updated: {dataset.lastUpdated}</div>
                   <div>Downloads: {dataset.downloads}</div>
                 </div>
@@ -306,6 +368,7 @@ const Dataset = () => {
                     <button 
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
                       title="Download dataset"
+                      onClick={() => handleDownload(dataset)}
                     >
                       <Download className="w-5 h-5" />
                     </button>
@@ -314,6 +377,13 @@ const Dataset = () => {
                       title="View details"
                     >
                       <ExternalLink className="w-5 h-5" />
+                    </button>
+                    <button
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-full"
+                      title="Delete dataset"
+                      onClick={() => handleDelete(dataset.id)}
+                    >
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
