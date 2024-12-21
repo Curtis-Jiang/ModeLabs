@@ -1,55 +1,56 @@
 import React, { useState } from 'react';
-import { Layout } from '../components/Layout';
+import Layout from '../components/Layout';
+import Navbar from '../components/Navbar';
 
 export default function RecommendationPage() {
   const [selectedTab, setSelectedTab] = useState('performance');
 
   return (
     <Layout>
-        <div className="bg-gradient-to-r from-blue-600 to-violet-600 text-white">
-          <div className="container mx-auto px-4 py-12">
-            <div className="max-w-6xl mx-auto">
-              <div className="flex items-center gap-2 text-blue-100 mb-6">
-                <span>编程开发</span>
-                <span className="text-sm">→</span>
-                <span>代码补全</span>
-              </div>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center gap-2 text-blue-100 mb-6">
+              <span>编程开发</span>
+              <span className="text-sm">→</span>
+              <span>代码补全</span>
+            </div>
 
-              <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="text-yellow-300">✨</span>
-                      <span className="text-yellow-300 font-medium">最佳推荐</span>
+            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-yellow-300">✨</span>
+                    <span className="text-yellow-300 font-medium">最佳推荐</span>
+                  </div>
+                  <h2 className="text-3xl font-bold mb-4">Claude 3.5</h2>
+                  <p className="text-blue-100 max-w-xl mb-6">
+                    基于您的需求，Claude 3.5是最佳选择。它在代码补全方面表现出色，
+                    具有极强的上下文理解能力和准确的代码生成能力。
+                  </p>
+                  <div className="flex gap-6">
+                    <div>
+                      <div className="text-sm text-blue-200 mb-1">平均响应时间</div>
+                      <div className="text-2xl font-bold">0.8s</div>
                     </div>
-                    <h2 className="text-3xl font-bold mb-4">Claude 3.5</h2>
-                    <p className="text-blue-100 max-w-xl mb-6">
-                      基于您的需求，Claude 3.5是最佳选择。它在代码补全方面表现出色，
-                      具有极强的上下文理解能力和准确的代码生成能力。
-                    </p>
-                    <div className="flex gap-6">
-                      <div>
-                        <div className="text-sm text-blue-200 mb-1">平均响应时间</div>
-                        <div className="text-2xl font-bold">0.8s</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-blue-200 mb-1">准确率</div>
-                        <div className="text-2xl font-bold">95%</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-blue-200 mb-1">用户满意度</div>
-                        <div className="text-2xl font-bold">4.8/5</div>
-                      </div>
+                    <div>
+                      <div className="text-sm text-blue-200 mb-1">准确率</div>
+                      <div className="text-2xl font-bold">95%</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-blue-200 mb-1">用户满意度</div>
+                      <div className="text-2xl font-bold">4.8/5</div>
                     </div>
                   </div>
-                  <button className="bg-white text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-blue-50 transition-colors">
-                    开始使用
-                  </button>
                 </div>
+                <button className="bg-white text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-blue-50 transition-colors">
+                  开始使用
+                </button>
               </div>
             </div>
           </div>
-        </div>
+        </main>
 
         {/* 主要内容区域 */}
         <div className="container mx-auto px-4 py-12">
@@ -141,7 +142,6 @@ export default function RecommendationPage() {
                   >
                     用户评价
                   </button>
-                  {/* 新增的选项卡按钮 */}
                   <button
                     className={`px-6 py-4 font-medium ${
                       selectedTab === 'metrics'
@@ -261,11 +261,9 @@ export default function RecommendationPage() {
                 )}
 
                 {selectedTab === 'metrics' && (
-                  // 新增的指标分析内容
                   <div className="space-y-6">
                     <h3 className="text-lg font-medium">专业指标分析</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {/* Claude 3.5 指标 */}
                       <div className="space-y-4">
                         <h4 className="font-medium">Claude 3.5</h4>
                         <div className="space-y-2">
@@ -292,7 +290,6 @@ export default function RecommendationPage() {
                         </div>
                       </div>
 
-                      {/* GPT-4 指标 */}
                       <div className="space-y-4">
                         <h4 className="font-medium">GPT-4</h4>
                         <div className="space-y-2">
@@ -320,7 +317,6 @@ export default function RecommendationPage() {
                       </div>
                     </div>
 
-                    {/* 指标说明 */}
                     <div className="mt-6">
                       <h4 className="font-medium">指标说明</h4>
                       <ul className="list-disc list-inside space-y-2 text-gray-600 text-sm">
@@ -348,11 +344,11 @@ export default function RecommendationPage() {
                     </div>
                   </div>
                 )}
-
               </div>
             </div>
           </div>
         </div>
+      </div>
     </Layout>
   );
 }
