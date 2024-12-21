@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { useNavigate } from 'react-router-dom';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import './i18n';
@@ -11,11 +10,11 @@ import './index.css';
 import App from './App';
 import WelcomePage from './WelcomePage';
 import reportWebVitals from './reportWebVitals';
-import Requirement_Dialog from './Requirement_Dialog'
-import Recommendation from './pages/Recommendation'
-import Home from './pages/Home'
-import Ranking from './pages/Ranking'
-import Navbar from './components/Navbar'
+import Requirement_Dialog from './Requirement_Dialog';
+import Recommendation from './pages/Recommendation';
+import Home from './pages/Home';
+import Ranking from './pages/Ranking';
+import Navbar from './components/Navbar';
 import { Table } from 'lucide-react';
 import ModelTest from './components/ModelTest';
 import { AuthProvider } from './contexts/AuthContext';
@@ -23,7 +22,7 @@ import Login from './pages/Login';
 import Profile from './pages/Profile';
 import Dataset from './pages/Dataset';
 import Test from './pages/Test';
-
+import PrivateRoute from './components/PrivateRoute';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -31,39 +30,77 @@ root.render(
   <React.StrictMode>
     <BrowserRouter>
       <I18nextProvider i18n={i18n}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/welcome" element={<WelcomePage />} />
-          <Route path="/requirement" element={<Requirement_Dialog />} />
-          <Route path="/recommendation" element={<Recommendation />} />
-          <Route path="/home" element={<WelcomePage />} />
-          <Route path="/ranking" element={<Ranking />} />
-          <Route path="/navbar" element={<Navbar />} />
-          <Route path="/api" element={<ModelTest />} />
-          <Route path="/login" element={<Login />} /> 
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/dataset" element={<Dataset />} />
-          <Route path="/test" element={<Test />} />
-          <Route path="/ai-recommend" element={<Recommendation />} />
-          
-      
-          {/* 未来的路由 */}
-          {/* <Route path="/profile" element={<Profile />} /> */}
-          {/* <Route path="/settings" element={<Settings />} /> */}
-          {/* <Route path="/about" element={<About />} /> */}
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/welcome" element={<WelcomePage />} />
+            <Route path="/requirement" element={<Requirement_Dialog />} />
+            <Route path="/recommendation" element={<Recommendation />} />
+            <Route path="/home" element={<WelcomePage />} />
+            <Route path="/login" element={<Login />} />
+            
+            {/* 受保护的路由 */}
+            <Route 
+              path="/ranking" 
+              element={
+                <PrivateRoute>
+                  <Ranking />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/navbar" 
+              element={
+                <PrivateRoute>
+                  <Navbar />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/api" 
+              element={
+                <PrivateRoute>
+                  <ModelTest />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <PrivateRoute>
+                  <Profile />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/dataset" 
+              element={
+                <PrivateRoute>
+                  <Dataset />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/test" 
+              element={
+                <PrivateRoute>
+                  <Test />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/ai-recommend" 
+              element={
+                <PrivateRoute>
+                  <Recommendation />
+                </PrivateRoute>
+              } 
+            />
+          </Routes>
         </AuthProvider>
       </I18nextProvider>
     </BrowserRouter>
   </React.StrictMode>
- );
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+);
+
 reportWebVitals();
-
-
-
-
-

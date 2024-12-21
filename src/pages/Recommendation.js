@@ -55,57 +55,10 @@ export default function RecommendationPage() {
         {/* 主要内容区域 */}
         <div className="container mx-auto px-4 py-12">
           <div className="max-w-6xl mx-auto">
-            {/* 次选推荐 */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm mb-12">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <span className="text-orange-400 text-xl">⚡</span>
-                  <span className="text-gray-900 font-medium">备选推荐</span>
-                </div>
-                <button className="text-blue-600 hover:text-blue-700">查看详情</button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <h3 className="text-xl font-semibold">GPT-4</h3>
-                  <p className="text-gray-600">
-                    作为备选方案，GPT-4在代码生成方面同样表现出色。特别适合需要处理复杂逻辑和
-                    多语言混合编程的场景。
-                  </p>
-                  <div className="flex gap-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400">⏱</span>
-                      <span className="text-sm text-gray-600">1.2s</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400">✓</span>
-                      <span className="text-sm text-gray-600">90%</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400">★</span>
-                      <span className="text-sm text-gray-600">4.6/5</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-medium text-gray-900">主要优势</h4>
-                  <ul className="space-y-2">
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>多语言支持更全面</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>更适合大型项目</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>文档生成能力强</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+            <div className="flex items-center gap-2 text-blue-100 mb-6">
+              <span>编程开发</span>
+              <span className="text-sm">→</span>
+              <span>代码补全</span>
             </div>
 
             {/* 详细分析区域 */}

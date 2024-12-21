@@ -35,7 +35,7 @@ const NavButton = ({ icon: Icon, label, isActive, onClick }) => {
 const Navbar = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { user , role } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -50,6 +50,11 @@ const Navbar = () => {
   const handleNavigation = (path) => {
     setActiveTab(path);
     setMenuOpen(false);
+
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     
     switch(path) {
       case 'model':
