@@ -115,10 +115,10 @@ const Dataset = () => {
 
   const handleUpload = async () => {
     if (!selectedFile || !user) return;
-
+  
     setIsUploading(true);
     setUploadStatus(null);
-
+  
     try {
       // Store metadata in Firestore
       const datasetRef = await addDoc(collection(db, 'datasets'), {
@@ -136,7 +136,7 @@ const Dataset = () => {
         subCategory: selectedSubCategory,
         tags: []
       });
-
+  
       // Fetch the newly added dataset
       const newDataset = {
         id: datasetRef.id,
@@ -145,7 +145,7 @@ const Dataset = () => {
         userEmail: user.email,
         fileSize: selectedFile.size,
         fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
-        uploadedAt: new Date().toLocaleDateString(), // Set the current date
+        uploadedAt: new Date(), // Set the current date
         description: fileDescription,
         status: 'pending',
         downloads: 0,
@@ -154,9 +154,9 @@ const Dataset = () => {
         subCategory: selectedSubCategory,
         tags: []
       };
-
+  
       setDatasets([newDataset, ...datasets]); // Add the new dataset to the state
-
+  
       setUploadStatus({
         type: 'success',
         message: 'Dataset metadata saved successfully! (Note: actual file storage coming soon)'
@@ -437,7 +437,7 @@ const Dataset = () => {
                 <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-4">
                   <div>Size: {formatFileSize(dataset.fileSize)}</div>
                   <div>Format: {dataset.fileType}</div>
-                  <div>Updated: {dataset.lastUpdated}</div>
+                  <div>Updated: {dataset.uploadedAt ? new Date(dataset.uploadedAt.seconds ? dataset.uploadedAt.seconds * 1000 : dataset.uploadedAt).toLocaleDateString() : 'N/A'}</div>
                   <div>Downloads: {dataset.downloads}</div>
                   <div className="col-span-2 flex flex-wrap gap-2 mt-2">
                     <span className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">
