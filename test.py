@@ -1,5 +1,5 @@
-#pip install selenium
-#webdriver下载至driver文件夹下
+# pip install selenium
+# webdriver下载至driver文件夹下
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -21,7 +21,7 @@ def test_in_chrome(driver_path):
 
     # 启动 Chrome 浏览器
     driver = webdriver.Chrome(service=service, options=options)
-
+    time.sleep(2)
     try:
         # 打开 localhost:3000
         driver.get("http://localhost:3000")
