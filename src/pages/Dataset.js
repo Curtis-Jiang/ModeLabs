@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { db, storage } from '../config/firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
   Upload, 
   Database, 
@@ -19,13 +18,21 @@ import {
 const ALLOWED_EXTENSIONS = ['.json', '.jsonl', '.csv', '.xlsx', '.yaml', '.yml'];
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
+const CATEGORIES = {
+  'Large Language Models': ['Language Understanding', 'Mathematics', 'Coding', 'Reasoning'],
+  'Multimodal Models': ['Image Recognition', 'Audio Processing', 'Text Understanding', 'Integration']
+};
+
 const Dataset = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileDescription, setFileDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedMainCategory, setSelectedMainCategory] = useState('All');
+  const [selectedSubCategoryFilter, setSelectedSubCategoryFilter] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('Large Language Models');
+  const [selectedSubCategory, setSelectedSubCategory] = useState('Language Understanding');
   const [datasets, setDatasets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDescriptionInput, setShowDescriptionInput] = useState(false);
@@ -61,10 +68,12 @@ const Dataset = () => {
   // Filter datasets based on search and category
   const filteredDatasets = datasets.filter(dataset => {
     const matchesSearch = dataset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         dataset.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || dataset.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+                           dataset.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesMainCategory = selectedMainCategory === 'All' || dataset.category === selectedMainCategory;
+    const matchesSubCategory = selectedSubCategoryFilter === 'All' || dataset.subCategory === selectedSubCategoryFilter;
+    return matchesSearch && matchesMainCategory && matchesSubCategory;
   });
+
 
   // Format file size for display
   const formatFileSize = (bytes) => {
@@ -123,6 +132,8 @@ const Dataset = () => {
         status: 'pending', // Since we don't have actual file storage yet
         downloads: 0,
         visibility: 'public',
+        category: selectedCategory,
+        subCategory: selectedSubCategory,
         tags: []
       });
 
@@ -139,6 +150,8 @@ const Dataset = () => {
         status: 'pending',
         downloads: 0,
         visibility: 'public',
+        category: selectedCategory,
+        subCategory: selectedSubCategory,
         tags: []
       };
 
@@ -174,14 +187,29 @@ const Dataset = () => {
     }
   };
 
-  const handleDownload = (dataset) => {
-    // Simulate file download
-    const element = document.createElement('a');
-    const file = new Blob([JSON.stringify(dataset)], { type: 'application/json' });
-    element.href = URL.createObjectURL(file);
-    element.download = `${dataset.name}.json`;
-    document.body.appendChild(element);
-    element.click();
+  const handleDownload = async (dataset) => {
+    try {
+      // 更新 Firestore 中下载次数
+      const datasetRef = doc(db, 'datasets', dataset.id);
+      await updateDoc(datasetRef, {
+        downloads: dataset.downloads + 1,  // 增加下载次数
+      });
+  
+      // 模拟文件下载
+      const element = document.createElement('a');
+      const file = new Blob([JSON.stringify(dataset)], { type: 'application/json' });
+      element.href = URL.createObjectURL(file);
+      element.download = `${dataset.name}`;
+      document.body.appendChild(element);
+      element.click();
+  
+      // 在本地状态中更新下载次数
+      setDatasets(datasets.map(d => 
+        d.id === dataset.id ? { ...d, downloads: d.downloads + 1 } : d
+      ));
+    } catch (error) {
+      console.error('Error downloading dataset:', error);
+    }
   };
 
   return (
@@ -260,6 +288,47 @@ const Dataset = () => {
             </div>
           )}
 
+          {/* Category and Sub-Category Selection */}
+          {showDescriptionInput && (
+            <>
+              <div className="mt-4">
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700">
+                  Category
+                </label>
+                <select
+                  id="category"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                >
+                  {Object.keys(CATEGORIES).map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mt-4">
+                <label htmlFor="subCategory" className="block text-sm font-medium text-gray-700">
+                  Sub-Category
+                </label>
+                <select
+                  id="subCategory"
+                  value={selectedSubCategory}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                >
+                  {CATEGORIES[selectedCategory].map((subCategory) => (
+                    <option key={subCategory} value={subCategory}>
+                      {subCategory}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
           {/* Selected File Info */}
           {selectedFile && (
             <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
@@ -314,14 +383,27 @@ const Dataset = () => {
           </div>
           <select
             className="px-4 py-2 border rounded-lg bg-white"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            value={selectedMainCategory}
+            onChange={(e) => setSelectedMainCategory(e.target.value)}
           >
-            <option>All Categories</option>
-            <option>Language Understanding</option>
-            <option>Mathematics</option>
-            <option>Coding</option>
-            <option>Reasoning</option>
+            <option value="All">All Categories</option>
+            {Object.keys(CATEGORIES).map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+          <select
+            className="px-4 py-2 border rounded-lg bg-white"
+            value={selectedSubCategoryFilter}
+            onChange={(e) => setSelectedSubCategoryFilter(e.target.value)}
+          >
+            <option value="All">All Sub-Categories</option>
+            {selectedMainCategory !== 'All' && CATEGORIES[selectedMainCategory].map((subCategory) => (
+              <option key={subCategory} value={subCategory}>
+                {subCategory}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -344,7 +426,6 @@ const Dataset = () => {
                     <h3 className="text-xl font-semibold text-gray-900">
                       {dataset.name}
                     </h3>
-                    <p className="text-sm text-gray-600">{dataset.fileType}</p>
                   </div>
                   <Database className="text-blue-500" />
                 </div>
@@ -358,13 +439,21 @@ const Dataset = () => {
                   <div>Format: {dataset.fileType}</div>
                   <div>Updated: {dataset.lastUpdated}</div>
                   <div>Downloads: {dataset.downloads}</div>
+                  <div className="col-span-2 flex flex-wrap gap-2 mt-2">
+                    <span className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">
+                      {dataset.category}
+                    </span>
+                    <span className="inline-block bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">
+                      {dataset.subCategory}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 truncate" title={dataset.userEmail}>
                     Uploaded by: {dataset.userEmail}
                   </span>
-                  <div className="space-x-2">
+                  <div className="flex space-x-2">
                     <button 
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
                       title="Download dataset"
