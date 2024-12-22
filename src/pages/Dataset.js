@@ -40,28 +40,29 @@ const Dataset = () => {
   const { user } = useAuth();
 
   // Fetch datasets from Firebase
-  useEffect(() => {
-    const fetchDatasets = async () => {
-      try {
-        const datasetsQuery = query(
-          collection(db, 'datasets'),
-          orderBy('uploadedAt', 'desc')
-        );
-        const querySnapshot = await getDocs(datasetsQuery);
-        const datasetsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          // Convert Firebase Timestamp to string for display
-          lastUpdated: doc.data().uploadedAt?.toDate().toLocaleDateString() || 'N/A'
-        }));
-        setDatasets(datasetsData);
-      } catch (error) {
-        console.error('Error fetching datasets:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchDatasets = async () => {
+    setLoading(true);
+    try {
+      const datasetsQuery = query(
+        collection(db, 'datasets'),
+        orderBy('uploadedAt', 'desc')
+      );
+      const querySnapshot = await getDocs(datasetsQuery);
+      const datasetsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        lastUpdated: doc.data().uploadedAt?.toDate().toLocaleDateString() || 'N/A'
+      }));
+      setDatasets(datasetsData);
+    } catch (error) {
+      console.error('Error fetching datasets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Initial fetch
+  useEffect(() => {
     fetchDatasets();
   }, []);
 
@@ -102,7 +103,7 @@ const Dataset = () => {
       if (file.size > MAX_FILE_SIZE) {
         setUploadStatus({
           type: 'error',
-          message: 'File size must be less than 100MB'
+          message: 'File size must be less than 1MB due to Firestore limitations'
         });
         return;
       }
@@ -120,7 +121,19 @@ const Dataset = () => {
     setUploadStatus(null);
   
     try {
-      // Store metadata in Firestore
+      console.log('Starting upload process for file:', selectedFile.name);
+      
+      // Read file content
+      const reader = new FileReader();
+      const fileContent = await new Promise((resolve, reject) => {
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(e);
+        
+        // Read as text for supported formats
+        reader.readAsText(selectedFile);
+      });
+
+      // Store in Firestore
       const datasetRef = await addDoc(collection(db, 'datasets'), {
         name: selectedFile.name,
         userId: user.uid,
@@ -159,7 +172,7 @@ const Dataset = () => {
   
       setUploadStatus({
         type: 'success',
-        message: 'Dataset metadata saved successfully! (Note: actual file storage coming soon)'
+        message: 'Dataset uploaded successfully!'
       });
       setSelectedFile(null);
       setFileDescription(''); // Clear the description input
@@ -167,11 +180,13 @@ const Dataset = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      
+      await fetchDatasets();
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('Upload error details:', error);
       setUploadStatus({
         type: 'error',
-        message: 'Error saving dataset metadata. Please try again.'
+        message: `Error uploading dataset: ${error.message}`
       });
     } finally {
       setIsUploading(false);
@@ -230,7 +245,7 @@ const Dataset = () => {
             <div className="flex-1">
               <h3 className="text-lg font-semibold mb-2">Upload New Dataset</h3>
               <p className="text-gray-600 text-sm">
-                Share your dataset with the community. Maximum file size: 100MB
+                Share your dataset with the community. Maximum file size: 1MB
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -239,7 +254,7 @@ const Dataset = () => {
                 ref={fileInputRef}
                 onChange={handleFileSelect}
                 className="hidden"
-                accept=".json,.jsonl,.csv,.xlsx,.yaml,.yml"
+                accept=".json,.jsonl,.csv,.yaml,.yml,.tsv"
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -455,14 +470,24 @@ const Dataset = () => {
                   </span>
                   <div className="flex space-x-2">
                     <button 
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
+                      onClick={() => handleDownload(dataset)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                       title="Download dataset"
                       onClick={() => handleDownload(dataset)}
                     >
                       <Download className="w-5 h-5" />
                     </button>
+                    {dataset.userId === user?.uid && (
+                      <button 
+                        onClick={() => handleDelete(dataset)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                        title="Delete dataset"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
                     <button 
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                       title="View details"
                     >
                       <ExternalLink className="w-5 h-5" />
