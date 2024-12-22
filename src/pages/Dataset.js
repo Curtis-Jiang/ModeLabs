@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { db } from '../config/firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc, updateDoc,getDoc } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Upload, 
@@ -120,53 +120,62 @@ const Dataset = () => {
     setUploadStatus(null);
   
     try {
-      // Store metadata in Firestore
-      const datasetRef = await addDoc(collection(db, 'datasets'), {
-        name: selectedFile.name,
-        userId: user.uid,
-        userEmail: user.email,
-        fileSize: selectedFile.size,
-        fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
-        uploadedAt: serverTimestamp(),
-        description: fileDescription, // Save the description
-        status: 'pending', // Since we don't have actual file storage yet
-        downloads: 0,
-        visibility: 'public',
-        category: selectedCategory,
-        subCategory: selectedSubCategory,
-        tags: []
-      });
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const fileContent = e.target.result;
   
-      // Fetch the newly added dataset
-      const newDataset = {
-        id: datasetRef.id,
-        name: selectedFile.name,
-        userId: user.uid,
-        userEmail: user.email,
-        fileSize: selectedFile.size,
-        fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
-        uploadedAt: new Date(), // Set the current date
-        description: fileDescription,
-        status: 'pending',
-        downloads: 0,
-        visibility: 'public',
-        category: selectedCategory,
-        subCategory: selectedSubCategory,
-        tags: []
+        // Store metadata and content in Firestore
+        const datasetRef = await addDoc(collection(db, 'datasets'), {
+          name: selectedFile.name,
+          userId: user.uid,
+          userEmail: user.email,
+          fileSize: selectedFile.size,
+          fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
+          uploadedAt: serverTimestamp(),
+          description: fileDescription, // Save the description
+          status: 'pending', // Since we don't have actual file storage yet
+          downloads: 0,
+          visibility: 'public',
+          category: selectedCategory,
+          subCategory: selectedSubCategory,
+          tags: [],
+          content: fileContent // Save the file content
+        });
+  
+        // Fetch the newly added dataset
+        const newDataset = {
+          id: datasetRef.id,
+          name: selectedFile.name,
+          userId: user.uid,
+          userEmail: user.email,
+          fileSize: selectedFile.size,
+          fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
+          uploadedAt: new Date(), // Set the current date
+          description: fileDescription,
+          status: 'pending',
+          downloads: 0,
+          visibility: 'public',
+          category: selectedCategory,
+          subCategory: selectedSubCategory,
+          tags: [],
+          content: fileContent // Save the file content
+        };
+  
+        setDatasets([newDataset, ...datasets]); // Add the new dataset to the state
+  
+        setUploadStatus({
+          type: 'success',
+          message: 'Dataset metadata saved successfully! (Note: actual file storage coming soon)'
+        });
+        setSelectedFile(null);
+        setFileDescription(''); // Clear the description input
+        setShowDescriptionInput(false); // Hide the description input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       };
   
-      setDatasets([newDataset, ...datasets]); // Add the new dataset to the state
-  
-      setUploadStatus({
-        type: 'success',
-        message: 'Dataset metadata saved successfully! (Note: actual file storage coming soon)'
-      });
-      setSelectedFile(null);
-      setFileDescription(''); // Clear the description input
-      setShowDescriptionInput(false); // Hide the description input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      reader.readAsText(selectedFile);
     } catch (error) {
       console.error('Upload error:', error);
       setUploadStatus({
@@ -195,18 +204,26 @@ const Dataset = () => {
         downloads: dataset.downloads + 1,  // 增加下载次数
       });
   
-      // 模拟文件下载
-      const element = document.createElement('a');
-      const file = new Blob([JSON.stringify(dataset)], { type: 'application/json' });
-      element.href = URL.createObjectURL(file);
-      element.download = `${dataset.name}`;
-      document.body.appendChild(element);
-      element.click();
+      // 获取文件内容
+      const docSnap = await getDoc(datasetRef);
+      if (docSnap.exists()) {
+        const fileContent = docSnap.data().content;
   
-      // 在本地状态中更新下载次数
-      setDatasets(datasets.map(d => 
-        d.id === dataset.id ? { ...d, downloads: d.downloads + 1 } : d
-      ));
+        // 模拟文件下载
+        const element = document.createElement('a');
+        const file = new Blob([fileContent], { type: 'text/csv' });
+        element.href = URL.createObjectURL(file);
+        element.download = `${dataset.name}`;
+        document.body.appendChild(element);
+        element.click();
+  
+        // 在本地状态中更新下载次数
+        setDatasets(datasets.map(d => 
+          d.id === dataset.id ? { ...d, downloads: d.downloads + 1 } : d
+        ));
+      } else {
+        console.error('No such document!');
+      }
     } catch (error) {
       console.error('Error downloading dataset:', error);
     }
