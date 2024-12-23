@@ -1,32 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Layout from '../components/Layout';
-import { Search, Star, TrendingUp, Award, ArrowUpRight } from 'lucide-react';
+import { Search, Star, TrendingUp, Award, ArrowUpRight, X } from 'lucide-react';
+import { db } from '../config/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 const Leaderboard = () => {
     const [activeTab, setActiveTab] = useState('Large Language');
     const [data, setData] = useState([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [newModel, setNewModel] = useState({
+        model_name: '',
+        model_type: 'Large Language',
+        api_url: '',
+        api_token: '',
+        description: '',
+    });
+
+    const fetchData = async () => {
+        try {
+            let response;
+            if (activeTab === 'Large Language') {
+                response = await axios.get('http://localhost:3001/api/language-model-rankings');
+            } else if (activeTab === 'Multimodal') {
+                response = await axios.get('http://localhost:3001/api/multimodal-model-rankings');
+            }
+            const rankedData = response.data.map((item, index) => ({
+                ...item,
+                rank: index + 1
+            }));
+            console.log('Ranked data:', rankedData);
+            setData(rankedData);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                let response;
-                if (activeTab === 'Large Language') {
-                    response = await axios.get('http://localhost:3001/api/language-model-rankings');
-                } else if (activeTab === 'Multimodal') {
-                    response = await axios.get('http://localhost:3001/api/multimodal-model-rankings');
-                }
-                const rankedData = response.data.map((item, index) => ({
-                    ...item,
-                    rank: index + 1
-                }));
-                console.log('Ranked data:', rankedData);
-                setData(rankedData);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
-        };
-
         fetchData();
     }, [activeTab]);
 
@@ -42,6 +52,34 @@ const Leaderboard = () => {
         if (rank === 2) return <Award className="w-5 h-5 text-gray-500" />;
         if (rank === 3) return <Award className="w-5 h-5 text-amber-600" />;
         return null;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const collectionName = newModel.model_type === 'Large Language' 
+                ? 'language-models' 
+                : 'multimodal-models';
+            
+            const modelData = {
+                ...newModel,
+                updated_at: new Date().toISOString().split('T')[0],
+            };
+
+            await addDoc(collection(db, collectionName), modelData);
+            setIsModalOpen(false);
+            setNewModel({
+                model_name: '',
+                model_type: 'Large Language',
+                api_url: '',
+                api_token: '',
+                description: '',
+            });
+            fetchData();
+        } catch (error) {
+            console.error('Error adding new model:', error);
+            alert('Failed to add new model');
+        }
     };
 
     return (
@@ -94,7 +132,6 @@ const Leaderboard = () => {
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">OVERALL SCORE</th>
                                 {activeTab === 'Large Language' && (
                                     <>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">INFERENCE</th>
                                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">MATHEMATICS</th>
                                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">CODING</th>
                                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">KNOWLEDGE USAGE</th>
@@ -133,7 +170,6 @@ const Leaderboard = () => {
                                     </td>
                                     {activeTab === 'Large Language' && (
                                         <>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{model.inference}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{model.mathematics}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{model.coding}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{model.knowledge_usage}</td>
@@ -159,10 +195,113 @@ const Leaderboard = () => {
                         <Star className="w-4 h-4" />
                         <span>Based on Modelabs 1.0</span>
                     </span>
-                    <button className="text-blue-600 hover:text-blue-800 transition-colors">
-                        View full documentation →
+                    <button 
+                        onClick={() => setIsModalOpen(true)}
+                        className="text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                        ADD NEW Model →
                     </button>
                 </div>
+
+                {isModalOpen && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-2xl font-bold text-gray-800">Add New Model</h3>
+                                <button 
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+                            
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Model Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={newModel.model_name}
+                                            onChange={(e) => setNewModel({...newModel, model_name: e.target.value})}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Model Type
+                                        </label>
+                                        <select
+                                            value={newModel.model_type}
+                                            onChange={(e) => setNewModel({...newModel, model_type: e.target.value})}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="Large Language">Large Language</option>
+                                            <option value="Multimodal">Multimodal</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            API URL
+                                        </label>
+                                        <input
+                                            type="url"
+                                            required
+                                            value={newModel.api_url}
+                                            onChange={(e) => setNewModel({...newModel, api_url: e.target.value})}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            API Token
+                                        </label>
+                                        <input
+                                            type="password"
+                                            required
+                                            value={newModel.api_token}
+                                            onChange={(e) => setNewModel({...newModel, api_token: e.target.value})}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Model Description
+                                    </label>
+                                    <textarea
+                                        required
+                                        value={newModel.description}
+                                        onChange={(e) => setNewModel({...newModel, description: e.target.value})}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        rows="3"
+                                        placeholder="Enter a brief description of the model..."
+                                    />
+                                </div>
+
+                                <div className="flex justify-end space-x-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsModalOpen(false)}
+                                        className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                    >
+                                        Add Model
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
