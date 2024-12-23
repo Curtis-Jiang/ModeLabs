@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { db } from '../config/firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc, updateDoc,getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Upload, 
@@ -40,28 +40,29 @@ const Dataset = () => {
   const { user } = useAuth();
 
   // Fetch datasets from Firebase
-  useEffect(() => {
-    const fetchDatasets = async () => {
-      try {
-        const datasetsQuery = query(
-          collection(db, 'datasets'),
-          orderBy('uploadedAt', 'desc')
-        );
-        const querySnapshot = await getDocs(datasetsQuery);
-        const datasetsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          // Convert Firebase Timestamp to string for display
-          lastUpdated: doc.data().uploadedAt?.toDate().toLocaleDateString() || 'N/A'
-        }));
-        setDatasets(datasetsData);
-      } catch (error) {
-        console.error('Error fetching datasets:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchDatasets = async () => {
+    setLoading(true);
+    try {
+      const datasetsQuery = query(
+        collection(db, 'datasets'),
+        orderBy('uploadedAt', 'desc')
+      );
+      const querySnapshot = await getDocs(datasetsQuery);
+      const datasetsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        lastUpdated: doc.data().uploadedAt?.toDate().toLocaleDateString() || 'N/A'
+      }));
+      setDatasets(datasetsData);
+    } catch (error) {
+      console.error('Error fetching datasets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Initial fetch
+  useEffect(() => {
     fetchDatasets();
   }, []);
 
@@ -102,7 +103,7 @@ const Dataset = () => {
       if (file.size > MAX_FILE_SIZE) {
         setUploadStatus({
           type: 'error',
-          message: 'File size must be less than 100MB'
+          message: 'File size must be less than 1MB due to Firestore limitations'
         });
         return;
       }
@@ -120,67 +121,72 @@ const Dataset = () => {
     setUploadStatus(null);
   
     try {
+      console.log('Starting upload process for file:', selectedFile.name);
+      
+      // Read file content
       const reader = new FileReader();
-      reader.onload = async (e) => {
-        const fileContent = e.target.result;
+      const fileContent = await new Promise((resolve, reject) => {
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(e);
+        
+        // Read as text for supported formats
+        reader.readAsText(selectedFile);
+      });
+
+      // Store in Firestore
+      const datasetRef = await addDoc(collection(db, 'datasets'), {
+        name: selectedFile.name,
+        userId: user.uid,
+        userEmail: user.email,
+        fileSize: selectedFile.size,
+        fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
+        uploadedAt: serverTimestamp(),
+        description: fileDescription, // Save the description
+        status: 'pending', // Since we don't have actual file storage yet
+        downloads: 0,
+        visibility: 'public',
+        category: selectedCategory,
+        subCategory: selectedSubCategory,
+        tags: []
+      });
   
-        // Store metadata and content in Firestore
-        const datasetRef = await addDoc(collection(db, 'datasets'), {
-          name: selectedFile.name,
-          userId: user.uid,
-          userEmail: user.email,
-          fileSize: selectedFile.size,
-          fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
-          uploadedAt: serverTimestamp(),
-          description: fileDescription, // Save the description
-          status: 'pending', // Since we don't have actual file storage yet
-          downloads: 0,
-          visibility: 'public',
-          category: selectedCategory,
-          subCategory: selectedSubCategory,
-          tags: [],
-          content: fileContent // Save the file content
-        });
-  
-        // Fetch the newly added dataset
-        const newDataset = {
-          id: datasetRef.id,
-          name: selectedFile.name,
-          userId: user.uid,
-          userEmail: user.email,
-          fileSize: selectedFile.size,
-          fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
-          uploadedAt: new Date(), // Set the current date
-          description: fileDescription,
-          status: 'pending',
-          downloads: 0,
-          visibility: 'public',
-          category: selectedCategory,
-          subCategory: selectedSubCategory,
-          tags: [],
-          content: fileContent // Save the file content
-        };
-  
-        setDatasets([newDataset, ...datasets]); // Add the new dataset to the state
-  
-        setUploadStatus({
-          type: 'success',
-          message: 'Dataset metadata saved successfully! (Note: actual file storage coming soon)'
-        });
-        setSelectedFile(null);
-        setFileDescription(''); // Clear the description input
-        setShowDescriptionInput(false); // Hide the description input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
+      // Fetch the newly added dataset
+      const newDataset = {
+        id: datasetRef.id,
+        name: selectedFile.name,
+        userId: user.uid,
+        userEmail: user.email,
+        fileSize: selectedFile.size,
+        fileType: '.' + selectedFile.name.split('.').pop().toLowerCase(),
+        uploadedAt: new Date(), // Set the current date
+        description: fileDescription,
+        status: 'pending',
+        downloads: 0,
+        visibility: 'public',
+        category: selectedCategory,
+        subCategory: selectedSubCategory,
+        tags: []
       };
   
-      reader.readAsText(selectedFile);
+      setDatasets([newDataset, ...datasets]); // Add the new dataset to the state
+  
+      setUploadStatus({
+        type: 'success',
+        message: 'Dataset uploaded successfully!'
+      });
+      setSelectedFile(null);
+      setFileDescription(''); // Clear the description input
+      setShowDescriptionInput(false); // Hide the description input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      await fetchDatasets();
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('Upload error details:', error);
       setUploadStatus({
         type: 'error',
-        message: 'Error saving dataset metadata. Please try again.'
+        message: `Error uploading dataset: ${error.message}`
       });
     } finally {
       setIsUploading(false);
@@ -204,26 +210,18 @@ const Dataset = () => {
         downloads: dataset.downloads + 1,  // 增加下载次数
       });
   
-      // 获取文件内容
-      const docSnap = await getDoc(datasetRef);
-      if (docSnap.exists()) {
-        const fileContent = docSnap.data().content;
+      // 模拟文件下载
+      const element = document.createElement('a');
+      const file = new Blob([JSON.stringify(dataset)], { type: 'application/json' });
+      element.href = URL.createObjectURL(file);
+      element.download = `${dataset.name}`;
+      document.body.appendChild(element);
+      element.click();
   
-        // 模拟文件下载
-        const element = document.createElement('a');
-        const file = new Blob([fileContent], { type: 'text/csv' });
-        element.href = URL.createObjectURL(file);
-        element.download = `${dataset.name}`;
-        document.body.appendChild(element);
-        element.click();
-  
-        // 在本地状态中更新下载次数
-        setDatasets(datasets.map(d => 
-          d.id === dataset.id ? { ...d, downloads: d.downloads + 1 } : d
-        ));
-      } else {
-        console.error('No such document!');
-      }
+      // 在本地状态中更新下载次数
+      setDatasets(datasets.map(d => 
+        d.id === dataset.id ? { ...d, downloads: d.downloads + 1 } : d
+      ));
     } catch (error) {
       console.error('Error downloading dataset:', error);
     }
@@ -247,7 +245,7 @@ const Dataset = () => {
             <div className="flex-1">
               <h3 className="text-lg font-semibold mb-2">Upload New Dataset</h3>
               <p className="text-gray-600 text-sm">
-                Share your dataset with the community. Maximum file size: 100MB
+                Share your dataset with the community. Maximum file size: 1MB
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -256,7 +254,7 @@ const Dataset = () => {
                 ref={fileInputRef}
                 onChange={handleFileSelect}
                 className="hidden"
-                accept=".json,.jsonl,.csv,.xlsx,.yaml,.yml"
+                accept=".json,.jsonl,.csv,.yaml,.yml,.tsv"
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -472,14 +470,24 @@ const Dataset = () => {
                   </span>
                   <div className="flex space-x-2">
                     <button 
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
+                      onClick={() => handleDownload(dataset)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                       title="Download dataset"
                       onClick={() => handleDownload(dataset)}
                     >
                       <Download className="w-5 h-5" />
                     </button>
+                    {dataset.userId === user?.uid && (
+                      <button 
+                        onClick={() => handleDelete(dataset)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                        title="Delete dataset"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
                     <button 
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                       title="View details"
                     >
                       <ExternalLink className="w-5 h-5" />
