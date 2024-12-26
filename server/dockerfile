@@ -17,13 +17,6 @@ COPY . .
 # 生成 Prisma 客户端
 RUN npx prisma generate
 
-# 安装 Python 和 pip，并创建虚拟环境
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip python3-venv && \
-    python3 -m venv venv && \
-    . venv/bin/activate && \
-    pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
-    pip install -r requirements.txt
 
 # 暴露后端 API 服务端口
 EXPOSE 5000

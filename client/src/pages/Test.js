@@ -119,27 +119,37 @@ const Test = () => {
           </div>
 
           {/* Model Selection Section */}
-          <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Select Model</h2>
-            <div className="grid grid-cols-1 gap-4">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 mb-8">
+            <h2 className="text-xl font-semibold text-slate-900 mb-6">Select Model</h2>
+            <div className="grid grid-cols-2 gap-4">
               {models.map((model) => (
                 <button
                   key={model.id}
                   onClick={() => setSelectedModel(model)}
-                  className={`p-4 rounded-lg border ${
+                  className={`group relative p-6 rounded-xl border ${
                     selectedModel?.id === model.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300'
-                  } transition-colors`}
+                      ? 'border-violet-500 bg-violet-50/30'
+                      : 'border-slate-200 hover:border-violet-200 hover:bg-slate-50'
+                  } transition-all duration-200`}
                 >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-medium text-gray-900">{model.model_name}</h3>
-                      <p className="text-sm text-gray-500">{model.type}</p>
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-slate-900 text-left line-clamp-2">
+                          {model.model_name}
+                        </h3>
+                        <span className="inline-flex items-center px-2.5 py-0.5 mt-2 rounded-full text-xs font-medium ${
+                          selectedModel?.id === model.id
+                            ? 'bg-violet-100 text-violet-800'
+                            : 'bg-slate-100 text-slate-700'
+                        }">
+                          {model.type}
+                        </span>
+                      </div>
+                      {selectedModel?.id === model.id && (
+                        <CheckCircle className="h-5 w-5 text-violet-500 shrink-0" />
+                      )}
                     </div>
-                    {selectedModel?.id === model.id && (
-                      <CheckCircle className="h-5 w-5 text-blue-500" />
-                    )}
                   </div>
                 </button>
               ))}
