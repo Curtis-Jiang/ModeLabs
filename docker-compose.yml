@@ -17,7 +17,7 @@ services:
     build:
       context: ./client
     environment:
-      - REACT_APP_API_URL=${FRONTEND_URL}  # 后端 API 地址
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
       - REACT_APP_FIREBASE_API_KEY=${REACT_APP_FIREBASE_API_KEY}  # Firebase API 配置
       - REACT_APP_FIREBASE_AUTH_DOMAIN=${REACT_APP_FIREBASE_AUTH_DOMAIN}
       - REACT_APP_FIREBASE_PROJECT_ID=${REACT_APP_FIREBASE_PROJECT_ID}
@@ -39,6 +39,8 @@ services:
       - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     volumes:
       - ./server:/app
+    ports:
+      - "3001:3001"
     depends_on:
       - db  # 确保数据库服务先启动
     command: ["sh", "-c", "npx prisma migrate dev --name init && npm run start"]  # 启动 Node.js 后端服务并运行数据库迁移
